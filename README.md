@@ -1,4 +1,4 @@
-##A Little Bit Is Worse Than None: Ranking with Limited Training Data
+## A Little Bit Is Worse Than None: Ranking with Limited Training Data
 
 This paper contains the code to reproduce the results in the SustaiNLP2020 paper: *A Little Bit Is Worse Than None: Ranking with Limited Training Data*.
 Note that since we highly rely on the *ad-hoc retrieval framework [capreolus](https://capreolus.ai/)*, 
