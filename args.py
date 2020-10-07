@@ -28,6 +28,7 @@ def get_args(*args):
 
     parser.add_argument("--project_name", default="emnlp2020_workshop")
     parser.add_argument("--task", default="optimal", choices=TASKS)
+    parser.add_argument("--model", default="maxp", choices=["maxp"])  # more models in the future
     parser.add_argument("--dataset", default="rob04", choices=["rob04", "gov2"])
     parser.add_argument("--fold", type=str, default="all")
 
@@ -49,7 +50,7 @@ def get_args(*args):
 
     # tpu settings
     parser.add_argument("--tpu", type=str, default="use_default")
-    parser.add_argument("--gs_storage", type=str, default="gs://kelvin_project_crystina_dsg_us_f/reproduce")
+    parser.add_argument("--gs_storage", type=str, default="gs://crystina_dsg_us_f/deep_shallow")
     parser.add_argument("--tpuzone", type=str, default="us-central1-f")
 
     return parser.parse_args(*args)

@@ -47,7 +47,7 @@ def init_wandb(args, config, cv=False, project_name="default_project"):
 def get_configs(args):
     task_configs = get_task_config(args)
     shared_config = get_shared_config(args)
-    optimal_config = load_optimal_config()  # load maxp default parameters
+    optimal_config = load_optimal_config(args)  # load maxp default parameters
 
     if args.task in ["optimal", "inference"]:
         yield {

@@ -27,8 +27,9 @@ def get_shared_config(args):
     }
 
 
-def load_optimal_config():
-    with open(f"optimal_configs/maxp.txt") as f:
+def load_optimal_config(args):
+    fn = f"{args.model}.txt"
+    with open(f"optimal_configs/{fn}") as f:
         configs = {
             line.split("=")[0].strip(): line.split("=")[1].strip() for line in f
             if line.strip() and (not line.lstrip().startswith("#"))}  # use # as comment
