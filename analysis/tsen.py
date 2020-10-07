@@ -18,9 +18,12 @@ from capreolus_extensions.wandbRerankerTask import WandbRerankerTask
 def get_args():
     parser = ArgumentParser()
     parser.add_argument("--init_path", type=str, default="")
-    parser.add_argument("--dataset", type=str, default="msmarco_rob04_gov2")
+    parser.add_argument("--dataset", type=str, default="rob04")
     parser.add_argument("--sampling_size", type=int, default=2000)
 
+    parser.add_argument("--tpu", type=str, default="use_default")
+    parser.add_argument("--gs_storage", type=str, default="gs://kelvin_project_crystina_dsg_us_f/reproduce")
+    parser.add_argument("--tpuzone", type=str, default="us-central1-f")
     return parser.parse_args()
 
 

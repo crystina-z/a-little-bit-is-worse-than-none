@@ -19,11 +19,9 @@ def get_shared_config(args):
     return {
         "reranker.trainer.name": "tensorflowlog",
         "benchmark.name": "SampledRob04" if args.dataset == "rob04" else "SampledGov2",
-
-        # tpu config
-        "reranker.trainer.tpuzone": getattr(args, "tpuzone", None),
-        "reranker.trainer.storage": getattr(args, "gs_storage", None),
-        "reranker.trainer.usecache": getattr(args, "use_cache", True),
+        "reranker.trainer.tpuzone": args.tpuzone,
+        "reranker.trainer.storage": args.gs_storage,
+        "reranker.trainer.usecache": args.use_cache,
     }
 
 
