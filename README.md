@@ -34,7 +34,7 @@ python run.py \
 ```
 When all folds results are available, the prorgam will also show cross-validated results on the evaluation stage. 
 
-#### zero-shot Inference 
+#### Zero-shot Inference 
 We uploaded the converted ckpt to [here](), which will be needed to receive the zero-shot results reported in the paper. 
 ```  
 ckpt_path=/path/to/ckpt  # Note that for TPU users, the ckpt needs to be uploaded to gcs 
