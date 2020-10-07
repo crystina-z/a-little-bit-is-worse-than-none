@@ -7,14 +7,14 @@ Please find the details in the [framework github](https://github.com/capreolus-i
 
 The hyperparameters are listed under `./optimal_configs/maxp.txt`, with the format `config_key=config_value` each line.
 Feel free to try other settings using this format. Note that lines starting with `#` is considered as comments and will be ignored by the program.
-For the config key format and acceptable values, please find more details [here](https://capreolus.ai/en/latest/quick.html#command-line-interface) 
+For the config key format and acceptable values, please find more details [here](https://capreolus.ai/en/latest/quick.html#command-line-interface). 
 
 ### Reproduce
 The code is written in tensorflow-2.3 and supports TPU v2 and v3 (by Capreolus). 
 This section provides the code to replicate all the experiments listed in the paper, 
 which can be also found under `./scripts`
 
-#### Train 
+#### Train and Evaluate 
 The following script is used to **train** and **evaluate** the experiments with sampled dataset. 
 ```
 fold=s1       # Robust04 has fold from s1 to s5, GOV2 has fold from s1 to s3 
@@ -25,7 +25,12 @@ do_train=True # if False, training will be skipped. Acceptable if training resul
 do_eval=True  # if False, evaluation will be skipped. You can review it later using "--do_train=False --do_eval=True" 
 
 python run.py \
-    --task sampling --dataset rob04 --sampling_rate $rate --fold $fold --train $do_train --eval $do_eval 
+    --task sampling \
+    --dataset rob04 \
+    --sampling_rate $rate \
+    --fold $fold \
+    --train $do_train \
+    --eval $do_eval 
 ```
 When all folds results are available, the prorgam will also show cross-validated results on the evaluation stage. 
 
@@ -47,7 +52,7 @@ If TPU is available, append the following arguments to the above scripts to run 
 ``` 
 
 #### WandB users
-If you use wandb, the results can be easily synced to your project by simply adding `--project_name name` after `pip install wandb && wandb login`. 
+If you use wandb, the results can be easily synced to your project by simply adding `--project_name your_wandb_project_name` after `pip install wandb && wandb login`. 
 You are expected to see all configs and the value of metric `mAP`, `P@20`, `nDCG@20` plotted. 
 
 
