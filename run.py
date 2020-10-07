@@ -30,7 +30,7 @@ def init_wandb(args, config, cv=False, project_name="default_project"):
             for k, v in config.items() if k not in exclusion_list
         }
     }
-    task, model, rate, benchmark = args.task, args.model, args.rate, config["benchmark.name"]
+    task, model, rate, benchmark = args.task, args.model, args.sampling_rate, config["benchmark.name"]
 
     fold = "cross-validate" if cv else args.fold
     run = wandb.init(
