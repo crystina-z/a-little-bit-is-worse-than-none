@@ -3,10 +3,10 @@ from multiprocessing import Process
 from capreolus import parse_config_string
 from capreolus.utils.loginit import get_logger
 
-from wandbRerankerTask import WandbRerankerTask
-from tensorflowlog import TensorflowLogTrainer  # it's not direclty used, yet it's necessary for the module to be registered
-from capreolus_extensions.collections import GOV2Collection
 from capreolus_extensions.sampledBenchmark import *
+from capreolus_extensions.collections import GOV2Collection
+from capreolus_extensions.wandbRerankerTask import WandbRerankerTask
+from capreolus_extensions.tensorflowlog import TensorflowLogTrainer  # it's not direclty used, yet it's necessary for the module to be registered
 
 from utils import *  # get_wandb, load_optimal_config, _get_shared_config
 from args import get_args, get_task_config
@@ -108,6 +108,9 @@ def main():
 
             tpu = args.tpu if args.tpu != "use_default" else FOLD2TPU[fold]
             config_string = common_config_string + f" reranker.trainer.tpuname={tpu} fold={fold}"
+
+            run_single_fold(config_string, fold, args, config)
+        '''
             p = Process(target=run_single_fold, args=(config_string, fold, args, config))  # so that 5 folds can run tgt
             processes.append(p)
             p.start()
@@ -117,6 +120,7 @@ def main():
             p.join()
             p.close()
         logger.info("FINISHED")
+        '''
 
 
 if __name__ == "__main__":

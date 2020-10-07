@@ -49,7 +49,7 @@ def get_args(*args):
 
     # tpu settings
     parser.add_argument("--tpu", type=str, default="use_default")
-    parser.add_argument("--gs_storage", type=str, default="gs://crystina_dsg_us_f/deep_shallow")
+    parser.add_argument("--gs_storage", type=str, default="gs://kelvin_project_crystina_dsg_us_f/reproduce")
     parser.add_argument("--tpuzone", type=str, default="us-central1-f")
 
     return parser.parse_args(*args)

@@ -18,7 +18,7 @@ class Timer(object):
 def get_shared_config(args):
     return {
         "reranker.trainer.name": "tensorflowlog",
-        "benchmark.name": "SampledRob04" if args.coll == "rob04" else "SampledGov2",
+        "benchmark.name": "SampledRob04" if args.dataset == "rob04" else "SampledGov2",
 
         # tpu config
         "reranker.trainer.tpuzone": getattr(args, "tpuzone", None),
