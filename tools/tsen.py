@@ -19,7 +19,6 @@ from capreolus_extensions.gov_index import *
 from capreolus_extensions.sampledBenchmark import * 
 from capreolus_extensions.tensorflowlog import *
 
-import pdb
 
 def get_args():
     parser = ArgumentParser()
@@ -35,8 +34,8 @@ def get_args():
     return parser.parse_args()
 
 
-def get_capreolus_task(args):
-    if args.dataset == "msmarco":
+def get_capreolus_task(dataset, args):
+    if dataset == "msmarco":
         config = {}
         pass  # TODO
     else:  # sampled_rob04 and sampled_gov2
@@ -45,7 +44,7 @@ def get_capreolus_task(args):
             **get_shared_config(args)
         }
     config_string = " ".join([f"{k}={v}" for k, v in config.items()])
-    if args.dataset == "gov2":
+    if dataset == "gov2":
         config_string += " rank.searcher.index.name=gov2index reranker.extractor.index.name=gov2index "
     return WandbRerankerTask(parse_config_string(config_string))
 
@@ -65,7 +64,7 @@ def filter_runs(runs, fold_qids, threshold=1000):
 
 def get_data_generator_rob04(args, task, batch_size=1):
     fold = "s1"
-    ds, size = args.dataset, args.sampling_size
+    size = args.sampling_size
     if size % batch_size:
         logger.warning(f"Batch size {batch_size} cannot be devided by total size {size}")
 
@@ -115,7 +114,7 @@ def get_data_generator_rob04(args, task, batch_size=1):
 
 def get_data_generator_gov2(args, task, batch_size=1):
     fold = "s1"
-    ds, size = args.dataset, args.sampling_size
+    size = args.sampling_size
     if size % batch_size:
         logger.warning(f"Batch size {batch_size} cannot be devided by total size {size}")
 
@@ -166,18 +165,16 @@ def get_data_generator_gov2(args, task, batch_size=1):
 def get_bert_activation(inputs, reranker):
     inp, mask, seg = [x.reshape(-1, 256) for x in [inputs["input"], inputs["mask"], inputs["seg"]]]
     bert_main_layer = reranker.model.bert.bert
-    # pdb.set_trace()
     pooled_output = bert_main_layer(
         inputs=inp,
         attention_mask=mask,
         token_type_ids=seg,
     )  # all_outputs, cls token
-    # pdb.set_trace()
     return pooled_output[1]  # shape: (batchsize * n_psg, nhidden)
 
 
-def get_tNE_feature(args):
-    path = f"{args.dataset}_slurm.pkl"
+def get_tNE_feature(dataset, args):
+    path = f"{dataset}_slurm.pkl"
     try:
         return pickle.load(open(path, "rb"))["transformed"]
     except:
@@ -185,7 +182,7 @@ def get_tNE_feature(args):
 
     task = get_capreolus_task(args=args)
     kwargs = {"args": args, "task": task, "batch_size": args.batch_size}
-    data_generator = get_data_generator_rob04(**kwargs) if args.dataset == "rob04" \
+    data_generator = get_data_generator_rob04(**kwargs) if dataset == "rob04" \
         else get_data_generator_gov2(**kwargs)
     task.reranker.trainer.load_best_model(task.reranker, args.init_path, do_not_hash=True)
     with Timer(desc="Preparing Bert output"):
@@ -204,10 +201,13 @@ def get_tNE_feature(args):
 
 def main():
     args = get_args()
-    Y = get_tNE_feature(args)
-    plt.scatter(Y[:, 0], Y[:, 1])
-    plt.title(f"{args.dataset} - {args.sampling_size}")
+    datasets = args.dataset.split("+")
+    for dataset in datasets:
+        Y = get_tNE_feature(dataset, args)
+        plt.scatter(Y[:, 0], Y[:, 1], label=dataset)
+    # plt.title(f"{args- {args.sampling_size}")
     # plt.show()
+    plt.legend()
     plt.savefig("tsne.png")
 
 

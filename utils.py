@@ -15,10 +15,12 @@ class Timer(object):
         print(f"{self.desc}: {time_desc}")
 
 
-def get_shared_config(args):
+def get_shared_config(args, dataset=None):
+    if not dataset:
+        dataset = args.dataset
     return {
         "reranker.trainer.name": "tensorflowlog",
-        "benchmark.name": "sampled_rob04" if args.dataset == "rob04" else "sampled_gov2",
+        "benchmark.name": "sampled_rob04" if dataset == "rob04" else "sampled_gov2",
         "reranker.trainer.tpuzone": args.tpuzone,
         "reranker.trainer.storage": args.gs_storage,
         "reranker.trainer.usecache": getattr(args, "use_cache", True),
