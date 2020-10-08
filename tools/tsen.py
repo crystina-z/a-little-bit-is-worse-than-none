@@ -111,6 +111,53 @@ def get_data_generator(args, task, batch_size=1):
         logger.warning(f"{len(batch)} are discarded since it does not fit into batch size {batch_size}")
 
 
+def get_data_generator_gov2(args, task, batch_size=1):
+    fold = "s1"
+    ds, size = args.dataset, args.sampling_size
+    if size % batch_size:
+        logger.warning(f"Batch size {batch_size} cannot be devided by total size {size}")
+
+    rankTask = task.rank
+    benchmark = task.benchmark
+    extractor = task.reranker.extractor
+
+    qid2topic = benchmark.topics[benchmark.query_type]
+    best_search_run = Searcher.load_trec_run(rankTask.evaluate()["path"][fold])
+
+    n_generated_data = 0
+    batch = defaultdict(list)
+    bar = tqdm(total=size)
+
+    for qid, docid2scores in best_search_run.items():
+        topic = extractor.tokenizer.tokenize(qid2topic[qid])
+        for docid in docid2scores:
+            if batch and len(list(batch.values())[0]) == batch_size:
+                yield {k: np.array(v) for k, v in batch.items()}
+                batch = defaultdict(list)
+
+            if random.random() < 0.5:
+                continue
+            if n_generated_data >= size:
+                break
+
+            doc = extractor.index.get_doc(docid).split()
+            passages = extractor.get_passages_for_doc(doc)
+            assert passages == extractor.config["numpassages"]
+            inps, masks, segs = [], [], []
+            for i, psg in enumerate(passages):
+                inputs, segs, masks = extractor.tok2bertinput(topic, psg)
+                inps.append(inputs)
+                masks.append(masks)
+                segs.append(segs)
+
+            batch["input"].append(inps)
+            batch["mask"].append(masks)
+            batch["seg"].append(segs)
+
+            n_generated_data += 1
+            bar.update()
+
+
 def get_bert_activation(inputs, reranker):
     inp, mask, seg = [x.reshape(-1, 256) for x in [inputs["input"], inputs["mask"], inputs["seg"]]]
     bert_main_layer = reranker.model.bert.bert
