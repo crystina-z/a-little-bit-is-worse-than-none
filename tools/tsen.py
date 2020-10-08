@@ -19,6 +19,7 @@ from capreolus_extensions.gov_index import *
 from capreolus_extensions.sampledBenchmark import * 
 from capreolus_extensions.tensorflowlog import *
 
+import pdb
 
 def get_args():
     parser = ArgumentParser()
@@ -121,6 +122,9 @@ def get_data_generator_gov2(args, task, batch_size=1):
     rankTask = task.rank
     benchmark = task.benchmark
     extractor = task.reranker.extractor
+    extractor.pad = 0
+    extractor.pad_tok = extractor.tokenizer.bert_tokenizer.pad_token
+    extractor.index.create_index()    
 
     qid2topic = benchmark.topics[benchmark.query_type]
     best_search_run = Searcher.load_trec_run(rankTask.evaluate()["path"][fold])
@@ -143,17 +147,17 @@ def get_data_generator_gov2(args, task, batch_size=1):
 
             doc = extractor.index.get_doc(docid).split()
             passages = extractor.get_passages_for_doc(doc)
-            assert passages == extractor.config["numpassages"]
-            inps, masks, segs = [], [], []
+            assert len(passages) == extractor.config["numpassages"]
+            psg_inps, psg_masks, psg_segs = [], [], []
             for i, psg in enumerate(passages):
                 inputs, segs, masks = extractor.tok2bertinput(topic, psg)
-                inps.append(inputs)
-                masks.append(masks)
-                segs.append(segs)
+                psg_inps.append(inputs)
+                psg_masks.append(masks)
+                psg_segs.append(segs)
 
-            batch["input"].append(inps)
-            batch["mask"].append(masks)
-            batch["seg"].append(segs)
+            batch["input"].append(psg_inps)
+            batch["mask"].append(psg_masks)
+            batch["seg"].append(psg_segs)
 
             n_generated_data += 1
             bar.update()
@@ -162,16 +166,18 @@ def get_data_generator_gov2(args, task, batch_size=1):
 def get_bert_activation(inputs, reranker):
     inp, mask, seg = [x.reshape(-1, 256) for x in [inputs["input"], inputs["mask"], inputs["seg"]]]
     bert_main_layer = reranker.model.bert.bert
+    # pdb.set_trace()
     pooled_output = bert_main_layer(
         inputs=inp,
         attention_mask=mask,
         token_type_ids=seg,
     )  # all_outputs, cls token
+    # pdb.set_trace()
     return pooled_output[1]  # shape: (batchsize * n_psg, nhidden)
 
 
 def get_tNE_feature(args):
-    path = f"{args}.pkl"
+    path = f"{args.dataset}_slurm.pkl"
     try:
         return pickle.load(open(path, "rb"))["transformed"]
     except:
@@ -192,7 +198,7 @@ def get_tNE_feature(args):
         tsne = TSNE(random_state=0)
         Y = tsne.fit_transform(X)
 
-    pickle.dump({"original": X, "transformed": Y}, open("tmp.pkl", "wb"))
+    pickle.dump({"original": X, "transformed": Y}, open(path, "wb"))
     return Y
 
 

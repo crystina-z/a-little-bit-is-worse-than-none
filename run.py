@@ -12,6 +12,8 @@ from utils import *  # get_wandb, load_optimal_config, _get_shared_config
 from args import get_args, get_task_config
 
 
+import pdb
+
 wandb = get_wandb()
 logger = get_logger(__name__)
 FOLD2TPU = {f"s{i}": f"node-crys{i}" for i in range(1, 6)}
@@ -108,6 +110,10 @@ def main():
 
             tpu = args.tpu if args.tpu != "use_default" else FOLD2TPU[fold]
             config_string = common_config_string + f" reranker.trainer.tpuname={tpu} fold={fold}"
+            pdb.set_trace()
+            if args.dataset == "gov2":
+                pdb.set_trace()
+                config_string += " rank.searcher.index.name=gov2index reranker.extractor.index.name=gov2index " 
 
             run_single_fold(config_string, fold, args, config)
         '''

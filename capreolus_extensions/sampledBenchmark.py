@@ -80,6 +80,9 @@ class GOV2Benchmark(Benchmark):
     def download_if_missing(self):
         tmp_dir = self.get_cache_path() / "tmp"
         tmp_dir.mkdir(exist_ok=True, parents=True)
+        print(self.topic_file)
+        print(self.qrel_file)
+        print(self.fold_file)
         if self.topic_file.exists() and self.qrel_file.exists() and self.fold_file.exists():
             return
 
@@ -218,6 +221,7 @@ class SampleMixin:
 
     def download_if_missing(self):
         """ prepare sampled files from Robust04 qrels"""
+        print(">"*20, self.qrel_file, self.fold_file)
         if self.qrel_file.exists() and self.fold_file.exists():
             return
 
