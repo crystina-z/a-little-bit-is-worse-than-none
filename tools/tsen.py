@@ -44,7 +44,8 @@ def get_capreolus_task(args):
             **get_shared_config(args)
         }
     config_string = " ".join([f"{k}={v}" for k, v in config.items()])
-    print(config_string)
+    if args.dataset == "gov2":
+        config_string += " rank.searcher.index.name=gov2index reranker.extractor.index.name=gov2index "
     return WandbRerankerTask(parse_config_string(config_string))
 
 
@@ -61,7 +62,7 @@ def filter_runs(runs, fold_qids, threshold=1000):
     return dev_run
 
 
-def get_data_generator(args, task, batch_size=1):
+def get_data_generator_rob04(args, task, batch_size=1):
     fold = "s1"
     ds, size = args.dataset, args.sampling_size
     if size % batch_size:
@@ -170,14 +171,16 @@ def get_bert_activation(inputs, reranker):
 
 
 def get_tNE_feature(args):
-    path = "tmp.pkl"
+    path = f"{args}.pkl"
     try:
         return pickle.load(open(path, "rb"))["transformed"]
     except:
         logger.warning(f"Fail to load cached features, preparing...")
 
     task = get_capreolus_task(args=args)
-    data_generator = get_data_generator(args=args, task=task, batch_size=args.batch_size)
+    kwargs = {"args": args, "task": task, "batch_size": args.batch_size}
+    data_generator = get_data_generator_rob04(**kwargs) if args.dataset == "rob04" \
+        else get_data_generator_gov2(**kwargs)
     task.reranker.trainer.load_best_model(task.reranker, args.init_path, do_not_hash=True)
     with Timer(desc="Preparing Bert output"):
         X = np.array([
