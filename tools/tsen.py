@@ -180,7 +180,7 @@ def get_tNE_feature(dataset, args):
     except:
         logger.warning(f"Fail to load cached features, preparing...")
 
-    task = get_capreolus_task(args=args)
+    task = get_capreolus_task(dataset=dataset, args=args)
     kwargs = {"args": args, "task": task, "batch_size": args.batch_size}
     data_generator = get_data_generator_rob04(**kwargs) if dataset == "rob04" \
         else get_data_generator_gov2(**kwargs)
