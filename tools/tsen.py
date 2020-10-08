@@ -1,6 +1,5 @@
 import random
 import pickle
-from time import time
 from argparse import ArgumentParser
 
 from tqdm import tqdm
