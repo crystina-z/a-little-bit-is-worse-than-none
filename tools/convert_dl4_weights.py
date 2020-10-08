@@ -40,7 +40,7 @@ def rename_dl42cap(name):
     return name
 
 
-def reconvert_trial(inp_fn, outp_fn):
+def convert(inp_fn, outp_fn):
     # reference: https://www.tensorflow.org/guide/checkpoint#saving_object-based_checkpoints_with_estimator
     var_names, ckpt_reader = list_variables(inp_fn), load_checkpoint(inp_fn)
     renamed_tvars = {}
@@ -87,4 +87,4 @@ if __name__ == "__main__":
     parser.add_argument("--outp_fn", "-o", type=str, description="expected path to store converted weight")
     args = parser.parse_args()
 
-    reconvert_trial(inp_fn=args.inp_fn, outp_fn=args.outp_f)
+    convert(inp_fn=args.inp_fn, outp_fn=args.outp_f)
