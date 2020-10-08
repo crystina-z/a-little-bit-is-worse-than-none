@@ -21,7 +21,7 @@ def get_shared_config(args):
         "benchmark.name": "sampled_rob04" if args.dataset == "rob04" else "sampled_gov2",
         "reranker.trainer.tpuzone": args.tpuzone,
         "reranker.trainer.storage": args.gs_storage,
-        "reranker.trainer.usecache": args.use_cache,
+        "reranker.trainer.usecache": getattr(args, "use_cache", True),
     }
 
 
