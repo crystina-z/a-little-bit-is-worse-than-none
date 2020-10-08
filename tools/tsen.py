@@ -19,7 +19,6 @@ from capreolus_extensions.gov_index import *
 from capreolus_extensions.sampledBenchmark import * 
 from capreolus_extensions.tensorflowlog import *
 
-import pdb
 
 def get_args():
     parser = ArgumentParser()
@@ -77,8 +76,7 @@ def get_data_generator(args, task, batch_size=1):
         rankTask.evaluate()["path"][fold])
     docids = set(docid for querydocs in best_search_run.values() for docid in querydocs)
     reranker.extractor.preprocess(
-	qids=best_search_run.keys(), docids=docids, topics=benchmark.topics[benchmark.query_type])
-
+        qids=best_search_run.keys(), docids=docids, topics=benchmark.topics[benchmark.query_type])
     dev_run = filter_runs(
         runs=best_search_run,
         threshold=100,
@@ -121,29 +119,38 @@ def get_bert_activation(inputs, reranker):
         attention_mask=mask,
         token_type_ids=seg,
     )  # all_outputs, cls token
-    return pooled_output[1] # shape: (batchsize * n_psg, nhidden) 
+    return pooled_output[1]  # shape: (batchsize * n_psg, nhidden)
 
 
-def main():
-    args = get_args()
-    task = get_capreolus_task(args=args)
-    trainer, reranker = task.reranker.trainer, task.reranker
-    trainer.load_best_model(reranker, args.init_path, do_not_hash=True)
+def get_tNE_feature(capreolus_task, data_generator):
+    path = "tmp.pkl"
+    try:
+        return pickle.load(open(path, "rb"))["transformed"]
+    except:
+        logger.warning(f"Fail to load cached features, preparing...")
 
     with Timer(desc="Preparing Bert output"):
         X = np.array([
-            get_bert_activation(inputs, task.reranker) for inputs in get_data_generator(args=args, task=task, batch_size=args.batch_size)])
-        print("before reshape: ", X.shape) # expect: n_batch, batchsize * n_psg, hidden 
+            get_bert_activation(inputs, capreolus_task.reranker) for inputs in data_generator])
         n_batch, batch_size, n_hidden = X.shape
         X = X.reshape([n_batch * batch_size, n_hidden])
-        print("after reshape: ", X.shape) # expect: n_batch, batchsize * n_psg, hidden 
 
     with Timer(desc="Training t-SNE"):
         tsne = TSNE(random_state=0)
         Y = tsne.fit_transform(X)
 
     pickle.dump({"original": X, "transformed": Y}, open("tmp.pkl", "wb"))
-    plt.scatter(Y[:0], Y[:1])
+    return Y
+
+
+def main():
+    args = get_args()
+    task = get_capreolus_task(args=args)
+    data_generator = get_data_generator(args=args, task=task, batch_size=args.batch_size)
+    task.reranker.trainer.load_best_model(task.reranker, args.init_path, do_not_hash=True)
+    Y = get_tNE_feature(task, data_generator)
+
+    plt.scatter(Y[:, 0], Y[:, 1])
     plt.title(f"{args.dataset} - {args.sampling_size}")
     # plt.show()
     plt.savefig("tsne.png")
