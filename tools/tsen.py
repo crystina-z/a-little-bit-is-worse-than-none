@@ -122,16 +122,19 @@ def get_bert_activation(inputs, reranker):
     return pooled_output[1]  # shape: (batchsize * n_psg, nhidden)
 
 
-def get_tNE_feature(capreolus_task, data_generator):
+def get_tNE_feature(args):
     path = "tmp.pkl"
     try:
         return pickle.load(open(path, "rb"))["transformed"]
     except:
         logger.warning(f"Fail to load cached features, preparing...")
 
+    task = get_capreolus_task(args=args)
+    data_generator = get_data_generator(args=args, task=task, batch_size=args.batch_size)
+    task.reranker.trainer.load_best_model(task.reranker, args.init_path, do_not_hash=True)
     with Timer(desc="Preparing Bert output"):
         X = np.array([
-            get_bert_activation(inputs, capreolus_task.reranker) for inputs in data_generator])
+            get_bert_activation(inputs, task.reranker) for inputs in data_generator])
         n_batch, batch_size, n_hidden = X.shape
         X = X.reshape([n_batch * batch_size, n_hidden])
 
@@ -145,11 +148,7 @@ def get_tNE_feature(capreolus_task, data_generator):
 
 def main():
     args = get_args()
-    task = get_capreolus_task(args=args)
-    data_generator = get_data_generator(args=args, task=task, batch_size=args.batch_size)
-    task.reranker.trainer.load_best_model(task.reranker, args.init_path, do_not_hash=True)
-    Y = get_tNE_feature(task, data_generator)
-
+    Y = get_tNE_feature(args)
     plt.scatter(Y[:, 0], Y[:, 1])
     plt.title(f"{args.dataset} - {args.sampling_size}")
     # plt.show()
