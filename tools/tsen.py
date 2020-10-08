@@ -41,7 +41,7 @@ def get_capreolus_task(dataset, args):
     else:  # sampled_rob04 and sampled_gov2
         config = {
             **load_optimal_config(args),
-            **get_shared_config(args)
+            **get_shared_config(args, dataset=dataset)
         }
     config_string = " ".join([f"{k}={v}" for k, v in config.items()])
     if dataset == "gov2":
