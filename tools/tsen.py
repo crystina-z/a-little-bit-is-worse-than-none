@@ -9,6 +9,7 @@ from sklearn.manifold import TSNE
 from capreolus.searcher import Searcher
 from capreolus.sampler import PredSampler
 from capreolus import parse_config_string
+import tensorflow.compat.v1 as tf
 
 from utils import load_optimal_config, get_shared_config, Timer
 from capreolus_extensions.sampledBenchmark import *
@@ -35,14 +36,10 @@ def get_args():
 
 
 def get_capreolus_task(dataset, args):
-    if dataset == "msmarco":
-        config = {}
-        pass  # TODO
-    else:  # sampled_rob04 and sampled_gov2
-        config = {
-            **load_optimal_config(args),
-            **get_shared_config(args, dataset=dataset)
-        }
+    config = {
+        **load_optimal_config(args),
+        **get_shared_config(args, dataset=dataset)
+    }
     config_string = " ".join([f"{k}={v}" for k, v in config.items()])
     if dataset == "gov2":
         config_string += " rank.searcher.index.name=gov2index reranker.extractor.index.name=gov2index "
@@ -60,6 +57,51 @@ def filter_runs(runs, fold_qids, threshold=1000):
                     break
                 dev_run[qid][docid] = score
     return dev_run
+
+
+def get_msmarco_generator(args):
+    def extract_fn(data_record):
+        features = {
+              "query_ids": tf.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+              "doc_ids": tf.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+              "label": tf.FixedLenFeature([], tf.int64),
+        }
+        sample = tf.parse_single_example(data_record, features)
+        query_ids = tf.cast(sample["query_ids"], tf.int32)
+        doc_ids = tf.cast(sample["doc_ids"], tf.int32)
+        label_ids = tf.cast(sample["label"], tf.int32)
+        input_ids = tf.concat((query_ids, doc_ids), 0)
+        query_segment_id = tf.zeros_like(query_ids)
+        doc_segment_id = tf.ones_like(doc_ids)
+        segment_ids = tf.concat((query_segment_id, doc_segment_id), 0)
+        input_mask = tf.ones_like(input_ids)
+        features = {
+          "input_ids": input_ids,
+          "segment_ids": segment_ids,
+          "input_mask": input_mask,
+          "label_ids": label_ids,
+        }
+        return features
+
+    path = "data/dataset_dev.tf"
+    dataset = tf.data.TFRecordDataset([path])
+    dataset = dataset.map(extract_fn, num_parallel_calls=4).prefetch(1000)
+    iter = tf.data.Dataset.make_one_shot_iterator(dataset)
+
+    def _expand(x):
+        return tf.expand_dims(tf.expand_dims(x, axis=0), axis=0)
+
+    bar = tqdm(total=args.sampling_size * 30)  # hardcoded passage size
+    for i, data in enumerate(iter):
+        if i == (args.sampling_size * 30):
+            break
+
+        yield {
+            "input": _expand(data["input_ids"]),
+            "mask": _expand(data["input_mask"]),
+            "seg": _expand(data["segment_ids"]),
+        }
+        bar.update()
 
 
 def get_data_generator(args, task, batch_size=1):
@@ -130,9 +172,13 @@ def get_tNE_feature(dataset, args):
     except:
         logger.warning(f"Fail to load cached features, preparing...")
 
-    task = get_capreolus_task(dataset=dataset, args=args)
-    kwargs = {"args": args, "task": task, "batch_size": args.batch_size}
-    data_generator = get_data_generator(**kwargs)
+    if dataset == "msmarco":
+        task = get_capreolus_task(dataset="rob04", args=args)
+        data_generator = get_msmarco_generator(args)
+    else:
+        task = get_capreolus_task(dataset=dataset, args=args)
+        kwargs = {"args": args, "task": task, "batch_size": args.batch_size}
+        data_generator = get_data_generator(**kwargs)
     task.reranker.trainer.load_best_model(task.reranker, args.init_path, do_not_hash=True)
     with Timer(desc="Preparing Bert output"):
         X = np.array([
