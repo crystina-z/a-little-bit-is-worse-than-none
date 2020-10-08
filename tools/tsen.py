@@ -62,57 +62,7 @@ def filter_runs(runs, fold_qids, threshold=1000):
     return dev_run
 
 
-def get_data_generator_rob04(args, task, batch_size=1):
-    fold = "s1"
-    size = args.sampling_size
-    if size % batch_size:
-        logger.warning(f"Batch size {batch_size} cannot be devided by total size {size}")
-
-    rankTask = task.rank
-    benchmark = task.benchmark
-    extractor = task.reranker.extractor
-    reranker = task.reranker
-
-    best_search_run = Searcher.load_trec_run(
-        rankTask.evaluate()["path"][fold])
-    docids = set(docid for querydocs in best_search_run.values() for docid in querydocs)
-    reranker.extractor.preprocess(
-        qids=best_search_run.keys(), docids=docids, topics=benchmark.topics[benchmark.query_type])
-    dev_run = filter_runs(
-        runs=best_search_run,
-        threshold=100,
-        fold_qids=benchmark.folds[fold]["predict"]["dev"],
-    )
-    dev_dataset = PredSampler()
-    dev_dataset.prepare(
-        qid_to_docids=dev_run,
-        qrels=benchmark.qrels,
-        extractor=extractor,
-        relevance_level=benchmark.relevance_level,
-    )
-    n_generated_data = 0 
-    batch = defaultdict(list)
-    bar = tqdm(total=size)
-    for data in dev_dataset: 
-        if batch and len(list(batch.values())[0]) == batch_size:
-            yield {k: np.array(v) for k, v in batch.items()}
-            batch = defaultdict(list)
-
-        if random.random() < 0.5:
-            continue
-        if n_generated_data >= size:
-            break
-
-        n_generated_data += 1
-        bar.update()
-        for k, v in data.items():
-            if k in ["pos_bert_input", "pos_mask", "pos_seg"]:
-                batch[k.split("_")[-1]].append(v)
-    if batch:
-        logger.warning(f"{len(batch)} are discarded since it does not fit into batch size {batch_size}")
-
-
-def get_data_generator_gov2(args, task, batch_size=1):
+def get_data_generator(args, task, batch_size=1):
     fold = "s1"
     size = args.sampling_size
     if size % batch_size:
@@ -182,8 +132,7 @@ def get_tNE_feature(dataset, args):
 
     task = get_capreolus_task(dataset=dataset, args=args)
     kwargs = {"args": args, "task": task, "batch_size": args.batch_size}
-    data_generator = get_data_generator_rob04(**kwargs) if dataset == "rob04" \
-        else get_data_generator_gov2(**kwargs)
+    data_generator = get_data_generator(**kwargs)
     task.reranker.trainer.load_best_model(task.reranker, args.init_path, do_not_hash=True)
     with Timer(desc="Preparing Bert output"):
         X = np.array([
