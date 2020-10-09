@@ -9,7 +9,7 @@ from sklearn.manifold import TSNE
 from capreolus.searcher import Searcher
 from capreolus.sampler import PredSampler
 from capreolus import parse_config_string
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v1 as tf_v1
 
 from utils import load_optimal_config, get_shared_config, Timer
 from capreolus_extensions.sampledBenchmark import *
@@ -20,6 +20,7 @@ from capreolus_extensions.gov_index import *
 from capreolus_extensions.sampledBenchmark import * 
 from capreolus_extensions.tensorflowlog import *
 
+import pdb
 
 def get_args():
     parser = ArgumentParser()
@@ -62,19 +63,19 @@ def filter_runs(runs, fold_qids, threshold=1000):
 def get_msmarco_generator(args):
     def extract_fn(data_record):
         features = {
-              "query_ids": tf.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
-              "doc_ids": tf.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
-              "label": tf.FixedLenFeature([], tf.int64),
+              "query_ids": tf_v1.io.FixedLenSequenceFeature([], tf_v1.int64, allow_missing=True),
+              "doc_ids": tf_v1.io.FixedLenSequenceFeature([], tf_v1.int64, allow_missing=True),
+              "label": tf_v1.io.FixedLenFeature([], tf_v1.int64),
         }
-        sample = tf.parse_single_example(data_record, features)
-        query_ids = tf.cast(sample["query_ids"], tf.int32)
-        doc_ids = tf.cast(sample["doc_ids"], tf.int32)
-        label_ids = tf.cast(sample["label"], tf.int32)
-        input_ids = tf.concat((query_ids, doc_ids), 0)
-        query_segment_id = tf.zeros_like(query_ids)
-        doc_segment_id = tf.ones_like(doc_ids)
-        segment_ids = tf.concat((query_segment_id, doc_segment_id), 0)
-        input_mask = tf.ones_like(input_ids)
+        sample = tf_v1.io.parse_single_example(data_record, features)
+        query_ids = tf_v1.cast(sample["query_ids"], tf_v1.int32)
+        doc_ids = tf_v1.cast(sample["doc_ids"], tf_v1.int32)
+        label_ids = tf.cast(sample["label"], tf_v1.int32)
+        input_ids = tf_v1.concat((query_ids, doc_ids), 0)
+        query_segment_id = tf_v1.zeros_like(query_ids)
+        doc_segment_id = tf_v1.ones_like(doc_ids)
+        segment_ids = tf_v1.concat((query_segment_id, doc_segment_id), 0)
+        input_mask = tf_v1.ones_like(input_ids)
         features = {
           "input_ids": input_ids,
           "segment_ids": segment_ids,
@@ -83,13 +84,14 @@ def get_msmarco_generator(args):
         }
         return features
 
+    # pdb.set_trace()
     path = "data/dataset_dev.tf"
-    dataset = tf.data.TFRecordDataset([path])
+    dataset = tf_v1.data.TFRecordDataset([path])
     dataset = dataset.map(extract_fn, num_parallel_calls=4).prefetch(1000)
-    iter = tf.data.Dataset.make_one_shot_iterator(dataset)
+    iter = tf_v1.data.make_one_shot_iterator(dataset)
 
     def _expand(x):
-        return tf.expand_dims(tf.expand_dims(x, axis=0), axis=0)
+        return tf_v1.expand_dims(tf_v1.expand_dims(x, axis=0), axis=0)
 
     bar = tqdm(total=args.sampling_size * 30)  # hardcoded passage size
     for i, data in enumerate(iter):
@@ -155,7 +157,11 @@ def get_data_generator(args, task, batch_size=1):
 
 
 def get_bert_activation(inputs, reranker):
-    inp, mask, seg = [x.reshape(-1, 256) for x in [inputs["input"], inputs["mask"], inputs["seg"]]]
+    n_step = inputs["input"].shape[-1]
+    print(">>>>>> nstep", n_step)
+    inp, mask, seg = [
+            tf_v1.reshape(x, [-1, n_step]) 
+            for x in [inputs["input"], inputs["mask"], inputs["seg"]]]
     bert_main_layer = reranker.model.bert.bert
     pooled_output = bert_main_layer(
         inputs=inp,
